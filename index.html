@@ -106,7 +106,12 @@
                  m.includes('from \'location\'') ||
                  m.includes('blocked a frame with origin') ||
                  m.includes('accessing a cross-origin frame') ||
-                 m.includes('failed to read a named property \'origin\' from \'location\'');
+                 m.includes('failed to read a named property \'origin\' from \'location\'') ||
+                 m.includes('w3m-account-view') ||
+                 m.includes('no account provided') ||
+                 m.includes('web3modal') ||
+                 m.includes('wagmi') ||
+                 m.includes('viem');
         };
 
         const protectConsole = (type) => {

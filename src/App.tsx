@@ -210,22 +210,11 @@ const BaZiChart = ({ data, forceDesktop = false }: { data: any, forceDesktop?: b
 
 // Helper to safely get origin in sandboxed iframes
 const getSafeOrigin = () => {
-  if (typeof window === 'undefined') return 'https://mlbg.qintianjian.fun';
-  try {
-    // Try multiple ways to get the origin, avoiding direct Location access if possible
-    return window.origin || window.location.origin || document.location.origin || (document.baseURI ? new URL(document.baseURI).origin : 'https://mlbg.qintianjian.fun');
-  } catch (e) {
-    return 'https://mlbg.qintianjian.fun';
-  }
+  return 'https://mlbg.qintianjian.fun';
 };
 
 const getSafeHostname = () => {
-  if (typeof window === 'undefined') return 'mlbg.qintianjian.fun';
-  try {
-    return window.location.hostname || document.location.hostname || 'mlbg.qintianjian.fun';
-  } catch (e) {
-    return 'mlbg.qintianjian.fun';
-  }
+  return 'mlbg.qintianjian.fun';
 };
 
 const ModelMessage = ({ text, lang }: { text: string, lang: 'zh' | 'en' }) => {
@@ -245,7 +234,7 @@ const ModelMessage = ({ text, lang }: { text: string, lang: 'zh' | 'en' }) => {
         cleanText = text.replace(jsonMatch[0], '');
       }
     } catch (e) {
-      console.error("Failed to parse BaZi JSON", e);
+      console.warn("Failed to parse BaZi JSON", e);
     }
   }
 
@@ -268,7 +257,7 @@ const ModelMessage = ({ text, lang }: { text: string, lang: 'zh' | 'en' }) => {
       link.href = dataUrl;
       link.click();
     } catch (err) {
-      console.error('Download failed', err);
+      console.warn('Download failed', err);
     } finally {
       setIsDownloading(false);
     }
@@ -430,7 +419,7 @@ export default function App() {
 
   const t = {
     zh: {
-      agentTitle: "DecideAI 大占星师",
+      agentTitle: "钦天监大占星师",
       profileTitle: "天命星盘 (Celestial Profile)",
       profileDesc: "输入生辰八字以开启个性化排盘分析",
       year: "出生年",
@@ -443,7 +432,6 @@ export default function App() {
       male: "男",
       female: "女",
       save: "开启天命排盘 (0.01 BNB)",
-      headerDesc: "AI Agent Ecosystem on BNB Chain",
       solar: "公历",
       lunar: "农历"
     },
@@ -461,7 +449,6 @@ export default function App() {
       male: "Male",
       female: "Female",
       save: "Save & Analyze (0.01 BNB)",
-      headerDesc: "AI Agent Ecosystem on BNB Chain",
       solar: "Solar",
       lunar: "Lunar"
     }
@@ -566,17 +553,37 @@ export default function App() {
       const modelMsg: Message = { role: 'model', text: responseText, timestamp: new Date() };
       setMessages(prev => [...prev, modelMsg]);
     } catch (error: any) {
-      console.error("AI Generation Error:", error);
+      console.warn("AI Generation Error:", error);
       const errorMsg: Message = { 
         role: 'model', 
         text: lang === 'zh' 
-          ? `❌ 天机感应失败：${error.message}\n\n提示：请检查服务器环境变量 GEMINI_API_KEY 是否正确，或是否在 Google Cloud Console 中设置了 IP/域名限制。`
-          : `❌ Celestial Connection Failed: ${error.message}\n\nTip: Please check if GEMINI_API_KEY is correct or if there are IP/Domain restrictions in Google Cloud Console.`, 
+          ? `❌ 天机感应失败：${error.message}\n\n提示：如果您已配置 API Key，可能是因为 Key 存在 IP/域名限制，或者配额已用完。服务器已尝试自动重试。请检查 Google Cloud Console 中的限制设置。`
+          : `❌ Celestial Connection Failed: ${error.message}\n\nTip: If you have configured the API Key, it might have IP/Domain restrictions or quota limits. The server attempted a retry. Please check restrictions in Google Cloud Console.`, 
         timestamp: new Date() 
       };
       setMessages(prev => [...prev, errorMsg]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleWalletClick = async () => {
+    try {
+      if (isConnected) {
+        await open({ view: 'Account' });
+      } else {
+        await open();
+      }
+    } catch (e) {
+      console.warn("Wallet modal error:", e);
+      // Fallback: try opening without specific view if account view fails
+      if (isConnected) {
+        try {
+          await open();
+        } catch (retryError) {
+          console.warn("Wallet modal retry error:", retryError);
+        }
+      }
     }
   };
 
@@ -586,8 +593,7 @@ export default function App() {
       <header className="border-b border-white/10 p-4 md:p-6 flex flex-col sm:flex-row justify-between items-center sticky top-0 bg-[#050505]/90 backdrop-blur-xl z-50 gap-4 shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
         <div className="flex items-center gap-4 w-full sm:w-auto">
           <div className="flex flex-col">
-            <h1 className="font-serif text-xl md:text-2xl tracking-tight leading-none font-bold">DecideAI <span className="text-orange-500 drop-shadow-[0_0_8px_rgba(249,115,22,0.4)]">Web4.0</span></h1>
-            <p className="text-[8px] font-mono uppercase opacity-60 tracking-widest mt-1 text-orange-200/50">{t[lang].headerDesc}</p>
+            <h1 className="font-serif text-xl md:text-2xl tracking-tight leading-none font-bold">钦天监 <span className="text-orange-500 drop-shadow-[0_0_8px_rgba(249,115,22,0.4)]">Web4.0</span></h1>
           </div>
         </div>
         
@@ -607,7 +613,7 @@ export default function App() {
             </button>
           </div>
           <button 
-            onClick={() => isConnected ? open({ view: 'Account' }) : open()}
+            onClick={handleWalletClick}
             className={cn(
               "flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-xl border transition-all text-[10px] md:text-xs font-bold",
               isConnected 

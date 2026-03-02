@@ -7,28 +7,15 @@ import { ReactNode } from 'react'
 // 1. Get projectId at https://cloud.walletconnect.com
 const projectId = import.meta.env.VITE_PROJECT_ID || '669a14b62190bce494c6d16da3317011'
 
-// Helper to safely get origin in sandboxed iframes
-const getSafeOrigin = () => {
-  if (typeof window === 'undefined') return 'https://mlbg.qintianjian.fun';
-  try {
-    // Try multiple ways to get the origin, avoiding direct Location access if possible
-    return window.origin || window.location.origin || document.location.origin || (document.baseURI ? new URL(document.baseURI).origin : 'https://mlbg.qintianjian.fun');
-  } catch (e) {
-    return 'https://mlbg.qintianjian.fun';
-  }
-};
-
-const safeOrigin = getSafeOrigin();
-
 // 2. Create wagmiConfig
 const metadata = {
   name: 'Qin Tian Jian Web4.0',
   description: 'Decentralized Cycle Prediction on BNB Chain',
-  url: safeOrigin,
+  url: 'https://mlbg.qintianjian.fun',
   icons: ['https://avatars.githubusercontent.com/u/37784886'],
   redirect: {
-    native: safeOrigin,
-    universal: safeOrigin
+    native: 'https://mlbg.qintianjian.fun',
+    universal: 'https://mlbg.qintianjian.fun'
   }
 }
 

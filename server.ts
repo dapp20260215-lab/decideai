@@ -11,11 +11,10 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const SYSTEM_INSTRUCTION = `你现在是 DecideAI Web4.0 首席大占星师与交易专家，专注于 BNB Chain 上的 AI Agent 生态。
+const SYSTEM_INSTRUCTION = `你现在是 钦天监 Web4.0 首席大占星师与交易专家。
 你的任务是结合“三元九运”、“康波周期”、“美林时钟”、“木星周期”以及用户的“生辰八字”（包含姓名、性别、出生地等信息）提供深度个性化的加密资产研究报告。
 
 当前核心背景：
-- 定位：AI Agent Ecosystem on BNB Chain。
 - 2026 丙午年：九紫离火运巅峰。
 - 核心预判：牛市伴随经济危机 (Bull Market with Economic Crisis)。火气过旺导致资产价格泡沫化，同时伴随底层流动性风险或债务危机。
 
@@ -139,7 +138,7 @@ async function startServer() {
   app.post(["/api/ai/generate", "/api/ai/generate/"], async (req, res) => {
     console.log(`Received AI generation request. Proto: ${req.headers['x-forwarded-proto'] || 'http'}`);
     const { prompt, history } = req.body;
-    const rawApiKey = process.env.GEMINI_API_KEY;
+    const rawApiKey = "AIzaSyD_gJZhyeNtbTuatxD6gyQtKus-0ZKaM2g";
     const apiKey = rawApiKey?.trim();
 
     if (!apiKey) {
@@ -158,24 +157,44 @@ async function startServer() {
     try {
       const ai = new GoogleGenAI({ apiKey });
       
-      // Attempt generation
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: [
-          ...history,
-          { role: 'user', parts: [{ text: prompt }] }
-        ],
-        config: {
-          systemInstruction: SYSTEM_INSTRUCTION,
-          temperature: 0.7,
-          // Only include search if it's a standard key; some restricted keys fail with tools
-          tools: [{ googleSearch: {} }],
-        },
-      });
+      // Attempt generation with tools first
+      try {
+        const response = await ai.models.generateContent({
+          model: "gemini-1.5-flash",
+          contents: [
+            ...history,
+            { role: 'user', parts: [{ text: prompt }] }
+          ],
+          config: {
+            systemInstruction: SYSTEM_INSTRUCTION,
+            temperature: 0.7,
+            // Only include search if it's a standard key; some restricted keys fail with tools
+            tools: [{ googleSearch: {} }],
+          },
+        });
 
-      res.json({ text: response.text || "I am unable to process the celestial signals at this moment." });
+        res.json({ text: response.text || "I am unable to process the celestial signals at this moment." });
+      } catch (toolError: any) {
+        console.warn("Generation with tools failed, retrying without tools:", toolError.message);
+        
+        // Retry without tools
+        const response = await ai.models.generateContent({
+          model: "gemini-1.5-flash",
+          contents: [
+            ...history,
+            { role: 'user', parts: [{ text: prompt }] }
+          ],
+          config: {
+            systemInstruction: SYSTEM_INSTRUCTION,
+            temperature: 0.7,
+            // No tools in fallback
+          },
+        });
+        
+        res.json({ text: response.text || "I am unable to process the celestial signals at this moment (Fallback Mode)." });
+      }
     } catch (error: any) {
-      console.error("Gemini API Error Details:", JSON.stringify(error, null, 2));
+      console.warn("Gemini API Error Details:", JSON.stringify(error, null, 2));
       
       let errorMessage = "Failed to connect to AI service.";
       
@@ -188,7 +207,7 @@ async function startServer() {
       } else if (error.status === 403) {
         errorMessage = "Access denied. Your API key might not have permission for 'Generative Language API' or this specific model.";
       } else if (error.status === 404) {
-        errorMessage = "Model 'gemini-3-flash-preview' not found. Your key might not have access to this preview model yet.";
+        errorMessage = "Model 'gemini-1.5-flash' not found. Your key might not have access to this model.";
       }
 
       res.status(500).json({ 
@@ -221,10 +240,11 @@ async function startServer() {
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://0.0.0.0:${PORT}`);
-    if (!process.env.GEMINI_API_KEY) {
+    const key = "AIzaSyD_gJZhyeNtbTuatxD6gyQtKus-0ZKaM2g";
+    
+    if (!key) {
       console.warn("WARNING: GEMINI_API_KEY is not set in environment variables!");
     } else {
-      const key = process.env.GEMINI_API_KEY;
       const maskedKey = `${key.substring(0, 4)}...${key.substring(key.length - 4)}`;
       console.log(`GEMINI_API_KEY is configured: ${maskedKey} (Length: ${key.length})`);
     }
