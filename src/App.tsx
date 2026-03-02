@@ -486,7 +486,7 @@ export default function App() {
         return res.json();
       })
       .then(setCycles)
-      .catch(err => console.error("Failed to fetch cycles:", err));
+      .catch(err => console.warn("Failed to fetch cycles:", err));
   }, []);
 
   useEffect(() => {
@@ -529,8 +529,8 @@ export default function App() {
         };
         setMessages(prev => [...prev, paymentMsg]);
       } catch (error: any) {
-        console.error("Payment failed", error);
-        const isUserRejection = error?.message?.includes('User rejected') || error?.details?.includes('User denied');
+        console.warn("Payment cancelled or failed:", error?.message || error);
+        const isUserRejection = error?.message?.includes('User rejected') || error?.details?.includes('User denied') || error?.message?.includes('User denied');
         const errorMsg: Message = { 
           role: 'model', 
           text: lang === 'zh' 

@@ -103,36 +103,49 @@
                  m.includes('3000') ||
                  m.includes('named property \'origin\'') ||
                  m.includes('failed to read a named property') ||
-                 m.includes('from \'location\'');
+                 m.includes('from \'location\'') ||
+                 m.includes('blocked a frame with origin') ||
+                 m.includes('accessing a cross-origin frame') ||
+                 m.includes('failed to read a named property \'origin\' from \'location\'');
         };
 
-        const wrapConsole = (type) => {
-          const original = console[type];
-          if (!original) return;
-          console[type] = function(...args) {
-            const shouldSuppress = args.some(arg => {
-              if (!arg) return false;
-              if (typeof arg === 'string' && suppressError(arg)) return true;
-              if (arg instanceof Error) {
-                if (suppressError(arg.message) || suppressError(arg.stack) || suppressError(arg.name)) return true;
-              }
-              if (typeof arg === 'object') {
+        const protectConsole = (type) => {
+          let currentFn = console[type];
+          if (!currentFn) return;
+          
+          Object.defineProperty(console, type, {
+            get: () => {
+              return function(...args) {
+                const shouldSuppress = args.some(arg => {
+                  if (!arg) return false;
+                  if (typeof arg === 'string' && suppressError(arg)) return true;
+                  if (arg instanceof Error) {
+                    if (suppressError(arg.message) || suppressError(arg.stack) || suppressError(arg.name)) return true;
+                  }
+                  if (typeof arg === 'object') {
+                    try {
+                      const msg = arg.message || arg.name || String(arg);
+                      const stack = arg.stack || "";
+                      if (suppressError(msg) || suppressError(stack)) return true;
+                    } catch (e) {}
+                  }
+                  return false;
+                });
+                if (shouldSuppress) return;
                 try {
-                  const msg = arg.message || arg.name || String(arg);
-                  const stack = arg.stack || "";
-                  if (suppressError(msg) || suppressError(stack)) return true;
+                  return currentFn.apply(console, args);
                 } catch (e) {}
-              }
-              return false;
-            });
-            if (shouldSuppress) return;
-            try {
-              return original.apply(console, args);
-            } catch (e) {}
-          };
+              };
+            },
+            set: (newFn) => {
+              currentFn = newFn;
+            },
+            configurable: true,
+            enumerable: true
+          });
         };
 
-        ['error', 'warn', 'info', 'log', 'debug'].forEach(wrapConsole);
+        ['error', 'warn', 'info', 'log', 'debug'].forEach(protectConsole);
 
         // Global error handlers
         const globalErrorHandler = function(event) {
@@ -145,6 +158,7 @@
             if (suppressError(msg) || suppressError(stack) || suppressError(name)) {
               if (event.preventDefault) event.preventDefault();
               if (event.stopPropagation) event.stopPropagation();
+              if (event.stopImmediatePropagation) event.stopImmediatePropagation();
               return true;
             }
           } catch (e) {}
